@@ -2,8 +2,6 @@
 
 Skills for coding agents (Claude Code, Codex, Cursor and others that read `SKILL.md`).
 
-![Doodles drawn with the doodle skill: twenty daily objects in line and colour, and a row of line-only studies](.github/assets/preview.png)
-
 ## doodle
 
 Draws anything as a code-generated line illustration: objects, products, people,
