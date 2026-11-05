@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Start a new drawing of your own: drawings/<name>.html + drawings/<name>.js.
 #   bin/new.sh red-bicycle
-# Your drawings live in drawings/. The other pages are the bundled examples and kits:
-# read them, copy from them, never add to them.
+# Draw in drawings/<name>.js; deliver with bin/render.sh <name> (PNGs, folder opened).
 set -eu
 cd "$(dirname "$0")/.."
 name="${1:?usage: bin/new.sh <name>   (letters, digits, dashes)}"
@@ -14,4 +13,4 @@ for ext in html js; do
   sed "s/__NAME__/$name/g" "templates/drawing.$ext" > "$f"
 done
 echo "drawings/$name.html  drawings/$name.js"
-echo "render: bin/shot.sh \"drawings/$name.html?outline=1\" $name-line.png"
+echo "draw in drawings/$name.js, then: bin/render.sh $name"

@@ -1,5 +1,10 @@
 # Pages, files and modules (the index)
 
+
+> **Public installs ship no `*.html` pages.** The pages below are the author's demo
+> galleries and stay on their machine; what ships is `src/` (the modules named beside
+> each page), `bin/` and `templates/`. Read this file for which MODULE holds what.
+
 > Part of the `doodle` skill. Moved verbatim out of SKILL.md on 2026-11-04 so the core
 > loads whole; SKILL.md says when to read this file.
 

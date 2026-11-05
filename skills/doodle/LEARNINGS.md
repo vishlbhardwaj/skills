@@ -2285,3 +2285,13 @@ mode. 15 of 20 read on the first render. Three rounds. Breaks, and where they li
   the things-stage toolkit + People + auto-frame). SKILL.md Setup: new work goes in
   `drawings/`; bundled pages and `src/` are read-only examples. `check.sh` takes page
   arguments and includes `drawings/*.html`. The author's own behaviour is in LOCAL.md.
+
+## 2026-11-05 — users saw the author's demo gallery; deliver images instead
+- Symptom: a friend's agent (Codex) opened `doodle.html`, the author's earliest demo page,
+  with its subject tabs and dial panel; the user looked at the author's creations instead
+  of getting their own picture.
+- Cause: every demo `*.html` shipped with the engine, and nothing said what to deliver.
+- Fix: demo pages are git-ignored (author's machine only); public engine = src/ + bin/ +
+  templates/. Workspace is hidden `./.doodle`. `bin/render.sh <name>` writes
+  `doodles/<name>/<name>.png` + `-line.png` and opens the folder. Rule: deliver images;
+  no HTML page or canvas unless asked.

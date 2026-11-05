@@ -15,7 +15,9 @@ npx skills add vishlbhardwaj/skills --skill doodle
 ```
 
 Then ask your agent to "doodle a bicycle" or "draw a rainy street in pen and ink".
-On first use it copies the engine into `./doodle` in your project and draws there.
+Each drawing is saved as two images in `doodles/<name>/` in your project, one in
+colour and one as line only, and the folder opens when it is done. The engine sits
+in a hidden `.doodle/` folder next to it.
 
 ### Better results: give it a reference
 

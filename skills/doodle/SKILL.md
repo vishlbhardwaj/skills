@@ -16,21 +16,24 @@ it there**; an update of the skill overwrites it.
 
 1. If `LOCAL.md` exists next to this file, read it first: it names this machine's
    workspace and tools, and it overrides the default below.
-2. Otherwise the workspace is `./doodle` in the current project. If it does not
-   exist, create it: `cp -R "<this skill's folder>/engine" ./doodle`.
-3. Every path below (`src/…`, `bin/…`, `*.html`) is relative to the workspace.
-   Rendering and checks need Chrome or Chromium (`CHROME=/path` to override) and
-   python3; nothing else.
+2. Otherwise the workspace is `./.doodle` (hidden) in the current project. If it
+   does not exist, create it: `cp -R "<this skill's folder>/engine" ./.doodle`.
+3. Every path below (`src/…`, `bin/…`) is relative to the workspace. Rendering
+   needs Chrome or Chromium (`CHROME=/path` to override) and python3; nothing else.
 
-**Your drawings go in `drawings/`, one page each: `bin/new.sh <name>`** makes
-`drawings/<name>.html` + `drawings/<name>.js` with the full toolkit loaded and
-auto-framing; draw inside `draw(S)`. Everything else in the engine (`canvas.html`,
-`things.html`, `people.html`, `trials.html` … and `src/`) is the BUNDLED EXAMPLES
-AND KITS: read them, copy construction from them, never add a subject to them or
-edit them. The routing and Forms tables below name the EXAMPLE to start from,
-never where your work goes.
-Several things in one picture are one drawing; several separate drawings are
-several `bin/new.sh` pages.
+**One drawing = `bin/new.sh <name>`**, which makes `drawings/<name>.js` (draw inside
+`draw(S)`, full toolkit, auto-framed) and the page that renders it. Several things in
+one picture are one drawing; several separate pictures are several names.
+
+**The examples are code, not pages.** The modules in `src/` (`things.js`,
+`people.js`, `trials.js`, `scapes.js` …) hold worked subjects: read them and copy
+their construction into your drawing; never add to them or edit them. The routing
+table below names which module to start from.
+
+**Deliver IMAGES, not pages.** When a drawing reads, run `bin/render.sh <name>`: it
+writes `doodles/<name>/<name>.png` (colour) and `<name>-line.png` (line only) in the
+project and opens that folder for the user. Tell them the folder path. Do not build,
+open or point the user at an HTML page, canvas or dial panel unless they ask for one.
 
 **This file is the whole contract, and it is short on purpose so it loads
 whole.** The detail lives in `references/` (moved there verbatim, nothing
@@ -57,9 +60,9 @@ for with a rejected drawing.
    composition, the large single frame for line quality. Both, every round.
 6. **Fix in the KIT, not the subject**, when the break is a helper's. Loop
    until every subject reads.
-7. **`bin/check.sh drawings/<name>.html`** (no argument = every page, `drawings/`
-   included): it renders, no NaN, no console errors, no class drift.
-8. **Fold what you learned into this skill IN THE SAME TURN** (§ Evolving).
+7. **`bin/check.sh drawings/<name>.html`** (no argument = every drawing): it renders, no NaN, no console errors, no class drift.
+8. **Deliver: `bin/render.sh <name>`** — PNGs in `doodles/<name>/`, folder opened.
+9. **Fold what you learned into this skill IN THE SAME TURN** (§ Evolving).
 
 ## Routing: what to read, where to start
 
@@ -71,8 +74,8 @@ for with a rejected drawing.
 | a round object (cup, vase, fruit, bottle) | `src/stilllife.js` stage (`lathe`, `ball`) or `src/still.js` | `still-life.md`, `geometry.md` (path construction) |
 | a still life / arrangement / from a photo | `src/stilllife.js` | `still-life.md` |
 | furniture | `src/furniture3.js`, `src/kitchen.js` | `products.md` |
-| an everyday object (laptop, scissors, glasses, toothbrush, hairdryer, t-shirt, soap, notebook, padlock, teddy, hanger, backpack, bottle…) | `src/things.js` `def(...)` (`things.html`, "twenty daily objects") | `products.md`, `geometry.md` |
-| a PERSON, people, anyone in a scene | `src/people.js` `People.figure` (`people.html`); never `Trials._figure` (dead) | **`people.md`** |
+| an everyday object (laptop, scissors, glasses, toothbrush, hairdryer, t-shirt, soap, notebook, padlock, teddy, hanger, backpack, bottle…) | `src/things.js` `def(...)` | `products.md`, `geometry.md` |
+| a PERSON, people, anyone in a scene | `src/people.js` `People.figure`; never `Trials._figure` (dead) | **`people.md`** |
 | an animal | `src/trials.js` (`cat`) | `figures-and-trials.md` |
 | glass, liquid, transparency | `src/trials.js` (`glass`) | `figures-and-trials.md` |
 | a bicycle, a frame, anything of thin tubes | `src/trials.js` (`bicycle`), `S.limb` | `figures-and-trials.md` |
@@ -83,12 +86,12 @@ for with a rejected drawing.
 | night, dark, weather, rain | `src/trials.js` (`night`, `rain`) on the scene kit | `figures-and-trials.md`, `landscapes.md` |
 | a street, a diorama, a café | `src/cafe.js`, `src/scenes.js` | `landscapes.md`, `geometry.md` |
 | a room / interior | `src/kitchen.js`, `src/deskscene.js` | `geometry.md`, `landscapes.md` (fidelity) |
-| pen and ink, no colour | `src/pen.js`, `pen.html` | `line-first.md` (tone), `forms-and-classes.md` (`ink`) |
-| a storyboard / sequence | `src/board.js`, `board.html` | `storyboards.md` |
+| pen and ink, no colour | `src/pen.js` | `line-first.md` (tone), `forms-and-classes.md` (`ink`) |
+| a storyboard / sequence | `src/board.js` | `storyboards.md` |
 | lettering, a sign | `src/letter.js` | `pages-and-files.md` |
 | make it move (Rive) | the Rive exporter (not bundled; see the file) | `animation.md` |
 | watch it draw, underdrawing | `?draw=<key>`, `?sketch=1` | `hand-and-craft.md` |
-| clean / vector / not doodly | `?style=clean` on retro.html / cafe.html | the `clean-illustration` skill if installed |
+| clean / vector / not doodly | n/a | the `clean-illustration` skill if installed |
 | a SET, a stress test | an existing set page as template | `checking.md` |
 | which page / file does what | n/a | `references/pages-and-files.md` |
 
@@ -98,14 +101,14 @@ All `references/` paths are relative to this skill folder.
 
 | They said | Form | Example to start from | Detail budget |
 |---|---|---|---|
-| "draw me a mug / a chair" | subject | `canvas.html`, `things.html` (your page: `bin/new.sh`) | everything, one thing at full fidelity |
-| "make me N of them" | set | its own page, `?s=<key>` per tile | one toolkit, detail lives in the toolkit |
-| "a house / a shopfront" | elevation | `houses.html`, `buildings.html` | three bays, 55% solid black fill |
-| "a street / a view / a landscape" | scene | its own page, stated frame + clip | the three-rung depth ladder |
-| "the whole block / a little world" | diorama | its own page | the block's edges stay IN the picture |
-| "a room" | interior | `canvas.html` | foreground full, back wall characteristic |
-| "storyboard this" | board | `board.html` | set by SHOT SIZE, not the subject |
-| "pen and ink / no colour" | register `ink` | `pen.html` | tone carried in line, no fill at all |
+| "draw me a mug / a chair" | subject | `src/things.js`, `src/retro.js` | everything, one thing at full fidelity |
+| "make me N of them" | set | one `bin/new.sh` drawing per item, shared helpers in each | one toolkit, detail lives in the toolkit |
+| "a house / a shopfront" | elevation | `src/houses.js`, `src/arch.js` | three bays, 55% solid black fill |
+| "a street / a view / a landscape" | scene | `src/scapes.js`, stated frame + clip | the three-rung depth ladder |
+| "the whole block / a little world" | diorama | `src/cafe.js` | the block's edges stay IN the picture |
+| "a room" | interior | `src/kitchen.js`, `src/deskscene.js` | foreground full, back wall characteristic |
+| "storyboard this" | board | `src/board.js` | set by SHOT SIZE, not the subject |
+| "pen and ink / no colour" | register `ink` | `src/pen.js` | tone carried in line, no fill at all |
 
 **A set is not a scene** (things on one page share nothing but a sheet), and **a
 board is not a set** (equal fidelity loses the sequence). The tell: must the things
@@ -193,16 +196,16 @@ the paper. Add a class only when the fill or tone policy genuinely differs.
 ## Verify
 
 ```bash
-cd <workspace>          # see Setup
-bin/check.sh                                   # every page: count, NaN, console, class drift
-bin/shot.sh "drawings/<name>.html?outline=1" out.png [1120x700]  # then drop ?outline=1 for colour
-# an example: bin/shot.sh "things.html?s=<key>&outline=1" out.png
-# both find Chrome/Chromium via bin/chrome.sh (override: CHROME=/path); shot.sh adds nodial/reset
-# and its own --user-data-dir, so parallel runs are safe
+cd <workspace>                                     # see Setup
+bin/check.sh drawings/<name>.html                  # renders, no NaN, no console errors, no class drift
+bin/shot.sh "drawings/<name>.html?outline=1" out.png [1120x700]   # a working look; drop ?outline=1 for colour
+bin/render.sh <name>                               # the delivery: doodles/<name>/*.png, folder opened
 ```
 
-Look at every PNG (open it, or read it if you can see images). A passing
-`check.sh` proves it rendered, not that it reads.
+Chrome/Chromium is found by `bin/chrome.sh` (override `CHROME=/path`); each shot gets
+its own `--user-data-dir`, so parallel runs are safe. Look at every PNG (open it, or
+read it if you can see images). A passing `check.sh` proves it rendered, not that it
+reads.
 
 ## Evolving this skill
 

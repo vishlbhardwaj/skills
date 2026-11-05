@@ -4,3 +4,7 @@ LOCAL.md
 shots/
 *.log
 skills/doodle/engine/drawings/
+# the author's demo pages and galleries stay on this machine; the public engine is src/ + bin/ + templates/
+skills/doodle/engine/*.html
+skills/doodle/engine/src/faucet.js
+skills/doodle/doodles/

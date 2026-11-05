@@ -9,7 +9,9 @@ cp -R src "$TMP/"; [ -d vendor ] && cp -R vendor "$TMP/"; [ -d drawings ] && cp 
 # no arguments: every bundled page. With arguments: just those (e.g. drawings/cup.html).
 if [ $# -gt 0 ]; then PAGES=("$@"); else
 PAGES=(kitchen.html canvas.html buildings.html plants.html scene.html retro.html cafe.html board.html still.html pen.html daily.html houses.html plants3.html furniture3.html vehicles.html stilllife.html faucet.html scapes.html trials.html people.html things.html)
+KEEP=(); for p in "${PAGES[@]}"; do [ -e "$p" ] && KEEP+=("$p"); done; PAGES=("${KEEP[@]+"${KEEP[@]}"}")
 for d in drawings/*.html; do [ -e "$d" ] && PAGES+=("$d"); done
+[ ${#PAGES[@]} -eq 0 ] && { echo "nothing to check yet (bin/new.sh <name> makes a drawing)"; exit 0; }
 fi
 for page in "${PAGES[@]}"; do
   python3 - "$page" "$TMP" <<'PY'
