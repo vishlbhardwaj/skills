@@ -22,6 +22,16 @@ it there**; an update of the skill overwrites it.
    Rendering and checks need Chrome or Chromium (`CHROME=/path` to override) and
    python3; nothing else.
 
+**Your drawings go in `drawings/`, one page each: `bin/new.sh <name>`** makes
+`drawings/<name>.html` + `drawings/<name>.js` with the full toolkit loaded and
+auto-framing; draw inside `draw(S)`. Everything else in the engine (`canvas.html`,
+`things.html`, `people.html`, `trials.html` … and `src/`) is the BUNDLED EXAMPLES
+AND KITS: read them, copy construction from them, never add a subject to them or
+edit them. The routing and Forms tables below name the EXAMPLE to start from,
+never where your work goes.
+Several things in one picture are one drawing; several separate drawings are
+several `bin/new.sh` pages.
+
 **This file is the whole contract, and it is short on purpose so it loads
 whole.** The detail lives in `references/` (moved there verbatim, nothing
 dropped). The ROUTING table below says which reference to read for the job.
@@ -47,8 +57,8 @@ for with a rejected drawing.
    composition, the large single frame for line quality. Both, every round.
 6. **Fix in the KIT, not the subject**, when the break is a helper's. Loop
    until every subject reads.
-7. **`bin/check.sh`**: every page renders, the expected count, no NaN, no
-   console errors, no class drift. Add a new page to its list.
+7. **`bin/check.sh drawings/<name>.html`** (no argument = every page, `drawings/`
+   included): it renders, no NaN, no console errors, no class drift.
 8. **Fold what you learned into this skill IN THE SAME TURN** (§ Evolving).
 
 ## Routing: what to read, where to start
@@ -86,9 +96,9 @@ All `references/` paths are relative to this skill folder.
 
 ## Forms
 
-| They said | Form | Goes on | Detail budget |
+| They said | Form | Example to start from | Detail budget |
 |---|---|---|---|
-| "draw me a mug / a chair" | subject | `canvas.html` (one entry in `SUBJECTS`) or a set page | everything, one thing at full fidelity |
+| "draw me a mug / a chair" | subject | `canvas.html`, `things.html` (your page: `bin/new.sh`) | everything, one thing at full fidelity |
 | "make me N of them" | set | its own page, `?s=<key>` per tile | one toolkit, detail lives in the toolkit |
 | "a house / a shopfront" | elevation | `houses.html`, `buildings.html` | three bays, 55% solid black fill |
 | "a street / a view / a landscape" | scene | its own page, stated frame + clip | the three-rung depth ladder |
@@ -185,7 +195,8 @@ the paper. Add a class only when the fill or tone policy genuinely differs.
 ```bash
 cd <workspace>          # see Setup
 bin/check.sh                                   # every page: count, NaN, console, class drift
-bin/shot.sh "<page>.html?s=<key>&outline=1" out.png [1120x700]   # then drop &outline=1 for colour
+bin/shot.sh "drawings/<name>.html?outline=1" out.png [1120x700]  # then drop ?outline=1 for colour
+# an example: bin/shot.sh "things.html?s=<key>&outline=1" out.png
 # both find Chrome/Chromium via bin/chrome.sh (override: CHROME=/path); shot.sh adds nodial/reset
 # and its own --user-data-dir, so parallel runs are safe
 ```

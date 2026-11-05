@@ -2274,3 +2274,14 @@ mode. 15 of 20 read on the first render. Three rounds. Breaks, and where they li
   `npx skills add <repo-or-path> --list` before pushing.
 - Machine-specific notes (workspace, VDL, the sync hook) live in git-ignored `LOCAL.md`;
   public text has no personal paths or names.
+
+## 2026-11-05 — other users' drawings landed in the bundled example canvas
+- Symptom: a friend installed the published skill; their agent added its doodles to
+  `canvas.html` beside the author's test subjects.
+- Cause: the skill said "a new subject is one entry in `SUBJECTS`" in canvas.html, and the
+  Forms table named example pages as where work "goes on". Right for the author's own
+  gallery, wrong for anyone else.
+- Fix: `bin/new.sh <name>` scaffolds `drawings/<name>.html` + `.js` (templates/drawing.*:
+  the things-stage toolkit + People + auto-frame). SKILL.md Setup: new work goes in
+  `drawings/`; bundled pages and `src/` are read-only examples. `check.sh` takes page
+  arguments and includes `drawings/*.html`. The author's own behaviour is in LOCAL.md.

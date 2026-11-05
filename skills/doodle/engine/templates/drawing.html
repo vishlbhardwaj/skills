@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__NAME__</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #FFFFFF; overflow: hidden; }
+  svg { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<!--
+  __NAME__ (made by bin/new.sh). The drawing lives in __NAME__.js next to this page.
+    ?outline=1 line only · ?draw=1 draw it live · d = redraw live
+-->
+<svg id="art" aria-label="__NAME__"><g id="world"></g></svg>
+<script src="../src/hand.js"></script>
+<script src="../src/view.js"></script>
+<script src="../src/kit.js"></script>
+<script src="../src/letter.js"></script>
+<script src="../src/spec.js"></script>
+<script src="../src/stage.js"></script>
+<script src="../src/vdl-tweak.js"></script>
+<script src="../src/retro.js"></script>
+<script src="../src/stilllife.js"></script>
+<script src="../src/scapes.js"></script>
+<script src="../src/trials.js"></script>
+<script src="../src/people.js"></script>
+<script src="../src/things.js"></script>
+<script src="__NAME__.js"></script>
+<script>
+const { flat, Live } = Stage;
+const q = new URLSearchParams(location.search);
+const P = flat({
+  seed: 7, weight: 26, wander: 0.09, pressure: 0.18, pressureFreq: 2.4,
+  wobble: 2.6, boil: 0.11, overshoot: 0.16, breaks: 0.02, blobs: 0, specks: 0,
+  doubleOffset: 0.5, double: false, hatchAngle: 52, hatchGap: 9, toneGap: 11,
+  toneDot: 0.26, scribbleGap: 12, regionRag: 0.5, offsetX: 0, offsetY: 0,
+  paper: "#FFFFFF", ink: "#17171A", cWood: "#D0A062", cWash: "#F2EEE8",
+  cLeaf: "#7E9B5E", cLeafD: "#5E7A4A", cOlive: "#9AA886", cCactus: "#88A86E", cTerra: "#C8794C", cPot: "#DCD6CA", cSoil: "#6B5848",
+  outline: q.get("outline") === "1", showShadow: true,
+});
+const TILE = { w: Math.round(1000 * Drawing._aspect), h: 1000, gap: 0 };
+const art = document.getElementById("art"), world = document.getElementById("world");
+const CELLS = [{ key: "main", mod: Drawing.main }];
+let tile = null;
+function render() {
+  world.textContent = "";
+  tile = Stage.build({ key: "main", mod: Drawing.main, col: 0, row: 0 }, P, TILE);
+  world.appendChild(tile);
+}
+render();
+art.setAttribute("viewBox", `0 0 ${TILE.w} ${TILE.h}`);
+art.setAttribute("preserveAspectRatio", "xMidYMid meet");
+const draw = () => Live.play(tile, { solo: false, speed: 2600, minMs: 40, gap: 6 });
+addEventListener("keydown", (e) => { if (e.key === "d") draw(); });
+VDLTweak.expose({ P, render, palette: [] });
+if (q.get("draw") === "1") setTimeout(draw, 200);
+</script>
+</html>

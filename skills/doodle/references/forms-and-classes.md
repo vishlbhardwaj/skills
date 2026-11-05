@@ -9,7 +9,7 @@ Answer this before anything else. The same request — "draw me a café" — is
 five different jobs depending on the form, and each has a different page, a
 different detail budget and a different way of failing.
 
-| they said | form | class | goes on | the detail budget |
+| they said | form | class | example page (new work: `bin/new.sh`) | the detail budget |
 |---|---|---|---|---|
 | "draw me a mug / a radio / a chair" | **subject** | `object`, `product`, `furniture` | `canvas.html`, one entry in `SUBJECTS` | everything. One thing at full fidelity |
 | "make me twenty of them" | **set** | the subject's class | its own page (`retro.html`, `plants.html`) | one shared frame, one toolkit, detail in the TOOLKIT so all twenty get it |

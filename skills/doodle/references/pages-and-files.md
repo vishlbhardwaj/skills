@@ -4,8 +4,9 @@
 > loads whole; SKILL.md says when to read this file.
 
 **Most things live on one canvas.** `canvas.html` holds every
-general subject — pan, zoom, colour on/off. A new subject is one entry in `SUBJECTS`,
-never a new page. The presentation pages (`buildings.html`, `plants.html`,
+general subject — pan, zoom, colour on/off. It is the author's gallery (their new
+subject = one entry in `SUBJECTS`). Anyone else's drawing goes in `drawings/` via
+`bin/new.sh`, never here. The presentation pages (`buildings.html`, `plants.html`,
 `scene.html`) are the exceptions: a chosen subset shown large on white, not a
 place to author. Never state these counts from memory — `bin/check.sh` prints
 the real ones.
@@ -229,6 +230,9 @@ the real ones.
                       furniture2, plants, plants2, land (OFF), macintosh,
                       objects, deskscene, workstation
     bin/check.sh      headless check of every page; run it after any edit
+    bin/new.sh        a new drawing of your own: drawings/<name>.html + .js from
+                      templates/drawing.*; your work lives in drawings/, never in
+                      the example pages
     bin/shot.sh       one page → PNG: bin/shot.sh "<page>?s=<key>&outline=1" out.png [WxH]
     bin/chrome.sh     sourced by both; finds Chrome/Chromium (override CHROME=)
     bin/export-retro.sh  retro.html -> JSON for Rive (ABSOLUTE out path!)
