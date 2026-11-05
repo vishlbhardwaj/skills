@@ -1,0 +1,30 @@
+<!doctype html><meta charset="utf-8"><title>raw</title>
+<style>body{margin:0;background:#FBFAF8}svg{width:100vw;height:100vh}</style>
+<svg id="s" viewBox="-6 -6 112 112"></svg>
+<script src="src/hand.js"></script><script src="src/objects.js"></script>
+<script>
+var which=new URLSearchParams(location.search).get("o")||"shoe";
+var o=Objects.ALL[which].build(), s=document.getElementById("s");
+var NS="http://www.w3.org/2000/svg";
+function path(pts,closed,curve,col,w){
+  var p = curve===false ? pts : Hand.smooth(pts, !!closed, 10);
+  var d="M"+p.map(q=>q[0].toFixed(1)+" "+q[1].toFixed(1)).join("L")+(closed?"Z":"");
+  var e=document.createElementNS(NS,"path");
+  e.setAttribute("d",d); e.setAttribute("fill","none");
+  e.setAttribute("stroke",col); e.setAttribute("stroke-width",w); s.appendChild(e);
+}
+o.regions.forEach(r=>path(r.pts,true,r.curve,"#0A84F8",0.6));
+o.marks.forEach(m=>path(m.pts,m.closed,m.curve,"#0A0A0A",0.7));
+/* the authored control points, so I can see what I actually typed */
+o.marks.concat(o.regions).forEach(function(m){
+  m.pts.forEach(function(q,i){
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("cx",q[0]); c.setAttribute("cy",q[1]); c.setAttribute("r",0.9);
+    c.setAttribute("fill","#E8453C"); s.appendChild(c);
+    var t=document.createElementNS(NS,"text");
+    t.setAttribute("x",q[0]+1.3); t.setAttribute("y",q[1]-1);
+    t.setAttribute("font-size","2.2"); t.setAttribute("fill","#9a9a9a");
+    t.textContent=i; s.appendChild(t);
+  });
+});
+</script>

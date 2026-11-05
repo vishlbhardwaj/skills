@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Retro hardware</title>
+<link rel="stylesheet" href="vendor/dialkit.css">
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: #FFFFFF; overflow: hidden;
+         font: 12px/1.5 ui-monospace, Menlo, monospace; color: #6B675F; }
+  #art { position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+         cursor: grab; touch-action: none; }
+  #art.drag { cursor: grabbing; }
+  .tip { position: fixed; right: 14px; bottom: 14px; opacity: .5; letter-spacing: .04em; }
+</style>
+
+<svg id="art" aria-label="Retro devices"><g id="world"></g></svg>
+<div class="tip">scroll to zoom · drag to pan · f = fit · d = draw the centre device live</div>
+
+<script src="vendor/dialkit.js"></script>
+<script src="src/hand.js"></script>
+<script src="src/view.js"></script>
+<script src="src/kit.js"></script>
+<script src="src/letter.js"></script>
+<script src="src/spec.js"></script>
+<script src="src/stage.js"></script>
+<script src="src/retro.js"></script>
+<script>
+/*
+ * TEN RETRO DEVICES ON A WHITE SHEET — src/retro.js, the same hand and pen
+ * as the buildings and plants, shown five by two with numbered captions.
+ */
+const TILE = { w: 900, h: 1000, gap: 40 };
+const COLS = 5;
+const { NS, flat, Live } = Stage;
+const q = new URLSearchParams(location.search);
+
+/*
+ * ?style=clean — the CLEAN ILLUSTRATION register (skill: clean-illustration).
+ * Same geometry; the hand is switched off: even line weight, round caps, no
+ * wander/pressure/boil/overshoot/breaks, exact fills. Its knobs live in the
+ * "Clean" dial folder; URL params set their starting values (and are what a
+ * Rive export uses):
+ *   &weight=17  &outline=1  &detail=1  &lines=tonal|ink|none  &tone=0.58
+ *   &ink=26262E  &seam=0.8  &caps=round|flat
+ */
+const CLEAN = q.get("style") === "clean" ? {
+  clean: true, wander: 0, pressure: 0, boil: 0, overshoot: 0, breaks: 0, blobs: 0, specks: 0,
+  double: false, regionRag: 0, solidRag: 0, offsetX: 0, offsetY: 0,
+} : null;
+const qn = (k, d) => (q.has(k) ? +q.get(k) : d);
+const CLEAN_DIALS = {
+  cWeight:  [qn("weight", 17), 4, 64, 0.5],
+  cOutline: [qn("outline", 1), 0.4, 3, 0.05],
+  cDetail:  [qn("detail", 1), 0.3, 2.5, 0.05],
+  cLines:   { type: "select", options: ["tonal", "ink", "none"], default: q.get("lines") || "tonal" },
+  cTone:    [qn("tone", 0.58), 0.15, 0.95, 0.01],
+  cInk:     "#" + (q.get("ink") || "26262E"),
+  cSeam:    [qn("seam", 0.8), 0, 2.5, 0.1],
+  cCaps:    { type: "select", options: ["round", "flat"], default: q.get("caps") || "round" },
+};
+function applyClean(P) {
+  if (!CLEAN) return P;
+  return { ...P, ...CLEAN, weight: P.cWeight, outlineMul: P.cOutline, detailMul: P.cDetail,
+           lineMode: P.cLines, toneDepth: P.cTone, ink: P.cInk, seam: P.cSeam, flatCaps: P.cCaps === "flat" };
+}
+
+/*
+ * The dials START at the buildings' hand (weight 26, their nib) because that
+ * is the pen the plants are tuned to. The modules' own nib is dropped here so
+ * the dials actually drive pressure, wander and the rest — Stage.build lets a
+ * module nib override the page, which would leave half the panel dead.
+ */
+const DEFAULTS = {
+  view: { outline: q.get("outline") === "1", showShadow: true },
+  mark: {
+    weight:       [26, 1, 60, 0.5],
+    wander:       [0.045, 0, 2, 0.005],
+    wobble:       [4, 2, 24, 1],
+    pressure:     [0.22, 0, 1, 0.01],
+    pressureFreq: [5, 2, 20, 1],
+    boil:         [0.1, 0, 1.2, 0.01],
+    overshoot:    [0.12, 0, 4, 0.05],
+  },
+  pen: {
+    double:       false,
+    doubleOffset: [0.5, 0, 3, 0.05],
+    breaks:       [0.012, 0, 0.9, 0.005],
+    blobs:        [0, 0, 2.5, 0.05],
+    specks:       [0, 0, 60, 1],
+  },
+  tone: {
+    hatchAngle:  [52, 0, 180, 1],
+    hatchGap:    [9, 2, 40, 0.5],
+    toneGap:     [11, 3, 40, 0.5],
+    toneDot:     [0.24, 0.1, 0.8, 0.01],
+    scribbleGap: [14, 4, 50, 0.5],
+  },
+  plate: {
+    offsetX:   [0, -20, 20, 0.5],
+    offsetY:   [0, -20, 20, 0.5],
+    regionRag: [0.35, 0, 3, 0.05],
+  },
+  palette: {
+    cLeaf:  "#7E9B5E",
+    cLeafD: "#5E7A4A",
+    cOlive: "#9AA886",
+    cCactus:"#88A86E",
+    cTerra: "#C8794C",
+    cPot:   "#DCD6CA",
+    cSoil:  "#6B5848",
+    cWood:  "#D0A062",
+    cWash:  "#F2EEE8",
+  },
+  sheet: {
+    ink:   "#17171A",
+    paper: "#FFFFFF",
+    seed:  [7, 1, 999, 1],
+  },
+};
+if (CLEAN) DEFAULTS.clean = CLEAN_DIALS;
+
+const world = document.getElementById("world");
+const art = document.getElementById("art");
+
+const W = COLS * TILE.w + (COLS - 1) * TILE.gap;
+const CELLS = Retro._keys.map((key, i) => ({
+  key, mod: { ...Retro[key], nib: null }, tile: TILE, n: i + 1, name: Retro._names[key],
+  x: (i % COLS) * (TILE.w + TILE.gap), y: Math.floor(i / COLS) * (TILE.h + TILE.gap) }));
+
+const caption = (txt, x, y, size, fill) => {
+  const t = document.createElementNS(NS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y);
+  t.setAttribute("text-anchor", "middle"); t.setAttribute("fill", fill || "#8A867E");
+  t.setAttribute("style", `font: ${size}px ui-monospace, Menlo, monospace; letter-spacing: .12em`);
+  t.textContent = txt;
+  return t;
+};
+
+function draw(P) {
+  P = applyClean(P);
+  document.body.style.background = P.paper;
+  world.textContent = "";
+  for (const c of CELLS) {
+    let g;
+    try { g = Stage.build({ key: c.key, mod: c.mod, col: 0, row: 0 }, P, c.tile); }
+    catch (e) { console.error("subject '" + c.key + "' failed:", e); continue; }
+    g.setAttribute("transform", `translate(${c.x} ${c.y})`);
+    const small = c.tile !== TILE;
+    g.appendChild(caption(String(c.n).padStart(2, "0") + "  " + c.name.toUpperCase(),
+                          c.tile.w / 2, c.tile.h - (small ? 8 : 20), small ? 17 : 22));
+    world.appendChild(g);
+  }
+}
+
+let k = 1, tx = 0, ty = 0;
+const apply = () => world.setAttribute("transform", `translate(${tx} ${ty}) scale(${k})`);
+
+function fitAll() {
+  const f = q.get("focus") && CELLS.find((c) => c.key === q.get("focus"));
+  const x0 = f ? f.x : 0, y0 = f ? f.y : 0;
+  const Wd = f ? f.tile.w : W;
+  const ROWS = Math.ceil(CELLS.length / COLS);
+  const H = f ? f.tile.h : ROWS * TILE.h + (ROWS - 1) * TILE.gap;
+  const m = 40, panel = q.has("nodial") ? 0 : 270;
+  const vw = innerWidth - panel;
+  k = Math.min((vw - m * 2) / Wd, (innerHeight - m * 2) / H);
+  tx = (vw - Wd * k) / 2 - x0 * k;
+  ty = (innerHeight - H * k) / 2 - y0 * k;
+  apply();
+}
+
+function zoomAt(cx, cy, f) {
+  const nk = Math.max(0.05, Math.min(14, k * f));
+  tx = cx - (cx - tx) * (nk / k);
+  ty = cy - (cy - ty) * (nk / k);
+  k = nk; apply();
+}
+art.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0016));
+}, { passive: false });
+
+let dragging = false, lx = 0, ly = 0;
+art.addEventListener("pointerdown", (e) => {
+  dragging = true; lx = e.clientX; ly = e.clientY; art.classList.add("drag");
+  try { art.setPointerCapture(e.pointerId); } catch (err) {}
+});
+art.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  tx += e.clientX - lx; ty += e.clientY - ly; lx = e.clientX; ly = e.clientY; apply();
+});
+["pointerup", "pointercancel"].forEach((n) =>
+  art.addEventListener(n, () => { dragging = false; art.classList.remove("drag"); }));
+
+function atCentre() {
+  let best = null, bd = 1e9;
+  for (const el of world.children) {
+    if (!el.__strokes) continue;
+    const b = el.getBoundingClientRect();
+    const d = Math.hypot(b.left + b.width / 2 - innerWidth / 2, b.top + b.height / 2 - innerHeight / 2);
+    if (d < bd) { bd = d; best = el; }
+  }
+  return best;
+}
+addEventListener("keydown", (e) => {
+  if (e.key === "f" || e.key === "0") fitAll();
+  if (e.key === "d" || e.key === "D") {
+    const g = atCentre();
+    if (!g) return;
+    if (Live.running) { Live.stop(); Live.reset(g); return; }
+    Live.play(g, e.key === "D" ? { speed: 900, gap: 70, fillMs: 300 } : {});
+  }
+});
+addEventListener("resize", fitAll);
+
+if (q.has("reset")) { try { for (const key of Object.keys(localStorage)) if (/retro/i.test(key)) localStorage.removeItem(key); } catch (e) {} }
+if (q.has("nodial")) { draw(flat(DEFAULTS)); fitAll(); }
+else {
+  DialKit.createDialRoot({ position: "top-right", theme: "dark" });
+  const panel = DialKit.createDialKit("Retro", DEFAULTS, { id: "doodle-retro" + (CLEAN ? "-clean" : ""), persist: true });
+  let first = true;
+  panel.subscribe((v) => {
+    draw(flat(v));
+    if (first) { first = false; fitAll(); }
+  }, true);
+}
+</script>
+</html>

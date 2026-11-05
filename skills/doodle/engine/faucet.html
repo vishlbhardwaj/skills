@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faucet — reel overlays</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #FBFAF8; overflow: hidden; }
+  body.clear { background: transparent; }
+  svg { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<!--
+  REEL OVERLAYS for the creativity-faucet reel (src/faucet.js). houses.html shape.
+    faucet.html                 all three in a row
+    faucet.html?f=<key>         one, fitted to the window      keys: mud clean pipe
+    &outline=1                  Line only (judge this first)
+    &bg=none                    transparent paper — for exporting PNGs to lay over video
+    &draw=1                     draw it live (screen-record this for a drawn-on overlay)
+  d = draw again.
+-->
+<svg id="art" aria-label="Faucet overlays"><g id="world"></g></svg>
+<script src="src/hand.js"></script>
+<script src="src/view.js"></script>
+<script src="src/kit.js"></script>
+<script src="src/letter.js"></script>
+<script src="src/spec.js"></script>
+<script src="src/stage.js"></script>
+<script src="src/vdl-tweak.js"></script>
+<script src="src/faucet.js"></script>
+<script>
+const { flat, Live } = Stage;
+const q = new URLSearchParams(location.search);
+const keys = q.get("f") ? [q.get("f")] : Faucet._keys;
+if (q.get("bg") === "none") document.body.classList.add("clear");
+const P = flat({
+  seed: 7, weight: 26, wander: 0.09, pressure: 0.18, pressureFreq: 2.4,
+  wobble: 2.6, boil: 0.11, overshoot: 0.16, breaks: 0.02, blobs: 0, specks: 0,
+  doubleOffset: 0.5, double: false, hatchAngle: 52, hatchGap: 9, toneGap: 11,
+  toneDot: 0.26, scribbleGap: 12, regionRag: 0.5, offsetX: 0, offsetY: 0,
+  paper: "#FBFAF8", ink: "#141414", cWood: "#D0A062", cWash: "#E9E4DA",
+  cBrass: "#D9A441", cMud: "#8A6A44", cMudInk: "#4A3520", cWater: "#A9D3EE",
+  cPipe: "#9BA3AB", cInside: "#EEF1F3", cPaper: "#F4F1EA", cBulb: "#FFD95A", cSteel: "#B8BEC4",
+  outline: q.get("outline") === "1", showShadow: true,
+});
+const TILE = { w: 940, h: 1000, gap: 26 };
+const FIT = { w: 0.94, h: 0.93 };
+const art = document.getElementById("art"), world = document.getElementById("world");
+let tiles = [];
+const CELLS = keys.map((key) => ({ key, mod: Faucet[key] }));
+function render() {
+  world.textContent = "";
+  tiles = [];
+  keys.forEach((key, i) => {
+    const mod = Faucet[key];
+    if (!mod) throw new Error("no such overlay: " + key);
+    const g = Stage.build({ key, mod: { ...mod, fit: FIT }, col: i, row: 0 }, P, TILE);
+    world.appendChild(g);
+    tiles.push(g);
+  });
+}
+render();
+const W = keys.length * TILE.w + (keys.length - 1) * TILE.gap;
+art.setAttribute("viewBox", `0 0 ${W} ${TILE.h}`);
+art.setAttribute("preserveAspectRatio", "xMidYMid meet");
+const draw = () => tiles.forEach((g, i) => Live.play(g, { solo: false, speed: 2600, minMs: 40, gap: 6 + i * 4 }));
+addEventListener("keydown", (e) => { if (e.key === "d") draw(); });
+VDLTweak.expose({ P, render, palette: ["cBrass", "cMud", "cMudInk", "cWater", "cPipe", "cInside", "cPaper", "cBulb", "cSteel"] });
+if (q.get("draw") === "1") setTimeout(draw, 200);
+</script>
+</html>

@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Doodle canvas</title>
+<link rel="stylesheet" href="vendor/dialkit.css">
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: #FBFAF8; overflow: hidden;
+         font: 12px/1.5 ui-monospace, Menlo, monospace; color: #6B675F; }
+  #art { position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+         cursor: grab; touch-action: none; }
+  #art.drag { cursor: grabbing; }
+
+  /* Chrome stays out of the drawing's way: bottom-left, quiet, small. */
+  .hud { position: fixed; left: 14px; bottom: 14px; display: flex; gap: 6px; align-items: center; }
+  .hud button { width: 28px; height: 28px; border: 1px solid #D8D4CC; border-radius: 7px;
+                background: #FFFEFC; color: #4A463F; font: inherit; cursor: pointer; }
+  .hud button:hover { background: #F2EFE9; }
+  .hud .z { min-width: 46px; text-align: center; letter-spacing: .04em; }
+  .hud .wide { width: auto; min-width: 42px; padding: 0 10px; }
+  .tip { position: fixed; right: 14px; bottom: 14px; opacity: .55; letter-spacing: .04em; }
+</style>
+
+<svg id="art" aria-label="Doodle canvas"><g id="world"></g></svg>
+
+<div class="hud">
+  <button id="out" title="Zoom out">−</button>
+  <span class="z" id="zl">100%</span>
+  <button id="in" title="Zoom in">+</button>
+  <button id="fit" class="wide" title="Fit all">fit</button>
+  <button id="play" class="wide" title="Watch it being drawn (d)">draw</button>
+</div>
+<div class="tip">scroll to zoom · drag to pan · d = draw it live</div>
+
+<script src="vendor/dialkit.js"></script>
+<script src="src/hand.js"></script>
+<script src="src/view.js"></script>
+<script src="src/kit.js"></script>
+<script src="src/letter.js"></script>
+<script src="src/spec.js"></script>
+<script src="src/stage.js"></script>
+<script src="src/desk.js"></script>
+<script src="src/chairs.js"></script>
+<script src="src/furniture.js"></script>
+<script src="src/deskscene.js"></script>
+<script src="src/workstation.js"></script>
+<script src="src/macintosh.js"></script>
+<script src="src/plants.js"></script>
+<script src="src/plants2.js"></script>
+<script src="src/scenes.js"></script>
+<script src="src/retro.js"></script>
+<script src="src/cafe.js"></script>
+<script src="src/furniture2.js"></script>
+<script src="src/land.js"></script>
+<script src="src/arch.js"></script>
+<script src="src/arch2.js"></script>
+<script src="src/still.js"></script>
+<script src="src/daily.js"></script>
+<script>
+/*
+ * THE DOODLE CANVAS.
+ *
+ * One surface that everything gets drawn onto, rather than a page per piece.
+ * Subjects are laid out on a world grid and you pan and zoom around them, so
+ * a new subject is one entry in SUBJECTS and no new page.
+ *
+ * Zoom is a VIEW transform on a <g>, not a re-render: the marks are vector and
+ * the hand is seeded, so magnifying must show you the same drawing closer, not
+ * a different drawing at a different size. Re-running the hand per zoom level
+ * would re-roll every wobble.
+ */
+const TILE = { w: 1100, h: 900, gap: 140 };
+
+const SUBJECTS = [
+  { key: "desk",       mod: Desk,              col: 0, row: 0 },
+  { key: "windsor",    mod: Chairs.windsor,    col: 1, row: 0 },
+  { key: "ladder",     mod: Chairs.ladder,     col: 2, row: 0 },
+  { key: "wishbone",   mod: Chairs.wishbone,   col: 0, row: 1 },
+  { key: "bentwood",   mod: Chairs.bentwood,   col: 1, row: 1 },
+  { key: "adirondack", mod: Chairs.adirondack, col: 2, row: 1 },
+  { key: "sideboard",  mod: Furniture.sideboard,  col: 0, row: 2 },
+  { key: "bookshelf",  mod: Furniture.bookshelf,  col: 1, row: 2 },
+  { key: "table",      mod: Furniture.roundTable, col: 2, row: 2 },
+  { key: "bench",      mod: Furniture.bench,      col: 0, row: 3 },
+  { key: "wardrobe",   mod: Furniture.wardrobe,   col: 1, row: 3 },
+  { key: "coffee",     mod: Furniture.coffee,     col: 2, row: 3 },
+  { key: "deskscene",  mod: DeskScene,            col: 0, row: 4 },
+  { key: "desksetup",  mod: Workstation,          col: 1, row: 4 },
+  { key: "mac",        mod: Macintosh,            col: 2, row: 4 },
+];
+
+/* plants: five across, starting on row 6 so the earlier work keeps its place */
+Plants._keys.forEach((key, i) => SUBJECTS.push(
+  { key, mod: Plants[key], col: i % 5, row: 6 + Math.floor(i / 5) }));
+
+Furniture2._keys.forEach((key, i) => SUBJECTS.push(
+  { key, mod: Furniture2[key], col: i % 5, row: 11 + Math.floor(i / 5) }));
+
+/* Landscapes are OFF. They were built on a frame that excluded their own
+   subjects and never recovered; the architecture row replaces them. Flip
+   SHOW_LAND to true to bring them back. */
+const SHOW_LAND = false;
+if (SHOW_LAND) Land._keys.forEach((key, i) => SUBJECTS.push(
+  { key, mod: Land[key], col: i % 5, row: 16 + Math.floor(i / 5) }));
+
+/*
+ * The twenty buildings, packed tighter than the rest of the canvas.
+ *
+ * col and row are MULTIPLIERS on the tile pitch, so fractional values just
+ * work — no plumbing needed. A building is tall and narrow, so fitted into a
+ * landscape tile it leaves wide margins either side; 0.58 of the column pitch
+ * closes that up without the drawings touching.
+ */
+[].concat(Arch._keys.map((k) => [k, Arch[k]]),
+          Arch2._keys.map((k) => [k, Arch2[k]]))
+  .forEach(([key, mod], i) => SUBJECTS.push(
+    { key, mod, col: (i % 5) * 0.58, row: 16 + Math.floor(i / 5) * 0.86 }));
+
+/* ten more plants — flowers, fruit, pads, spikes — below the buildings */
+Plants2._keys.forEach((key, i) => SUBJECTS.push(
+  { key, mod: Plants2[key], col: i % 5, row: 21 + Math.floor(i / 5) }));
+
+/* scenes, in the buildings/plants register — see src/scenes.js */
+Scenes._keys.forEach((key, i) => SUBJECTS.push({ key, mod: Scenes[key], col: i, row: 24 }));
+
+/* retro hardware: five across, rows 25–26 */
+Retro._keys.forEach((key, i) => SUBJECTS.push(
+  { key: "retro-" + key, mod: Retro[key], col: i % 5, row: 25 + Math.floor(i / 5) }));
+
+/* the café street — a scene, framed and clipped like the riverside */
+SUBJECTS.push({ key: "cafe", mod: Cafe.cafe, col: 0, row: 30 });
+
+/* the still life: ten objects, five across, rows 32–33 (still.html shows the
+   same ten on white with their numbers) */
+Still._keys.forEach((key, i) => SUBJECTS.push(
+  { key: "still-" + key, mod: Still[key], col: i % 5, row: 32 + Math.floor(i / 5) }));
+
+/* five daily objects, row 35 (daily.html shows the same five on white) */
+Daily._keys.forEach((key, i) => SUBJECTS.push(
+  { key: "daily-" + key, mod: Daily[key], col: i % 5, row: 35 }));
+
+const DEFAULTS = {
+  view: {
+    outline: false,        // line work only — colour off
+    showShadow: true,
+  },
+  mark: {
+    /* the HOUSE weight (Spec.REF). This page sat at 15 while every approved
+       page sat at 26, so the same subject drew 1.7x lighter here than on
+       plants.html — the drift that made Spec exist. */
+    weight:       [Spec.REF, 1, 48, 0.5],
+    wander:       [0.07, 0, 2, 0.01],
+    wobble:       [4, 2, 24, 1],
+    pressure:     [0.1, 0, 1, 0.01],
+    pressureFreq: [5, 2, 20, 1],
+    boil:         [0.12, 0, 1.2, 0.01],
+    overshoot:    [0.22, 0, 4, 0.05],
+  },
+  pen: {
+    double:       false,
+    doubleOffset: [0.5, 0, 3, 0.05],
+    breaks:       [0.03, 0, 0.9, 0.01],
+    blobs:        [0, 0, 2.5, 0.05],
+    specks:       [0, 0, 60, 1],
+  },
+  tone: {
+    hatchAngle:  [45, 0, 180, 1],
+    hatchGap:    [9, 2, 40, 0.5],
+    toneGap:     [10, 3, 40, 0.5],
+    toneDot:     [0.24, 0.1, 0.8, 0.01],
+    scribbleGap: [14, 4, 50, 0.5],
+  },
+  plate: {
+    offsetX:   [0, -20, 20, 0.5],
+    offsetY:   [0, -20, 20, 0.5],
+    regionRag: [0.35, 0, 3, 0.05],
+  },
+  palette: {
+    /* src/daily.js — five daily objects */
+    cCeram:   "#EAE6DC",
+    cStripe:  "#3E6E8E",
+    cCoffee:  "#43301F",
+    cShade:   "#7C766B",
+    cChrome:  "#CBD0D4",
+    cSteel:   "#9AA3A9",
+    cDial:    "#F4EEE0",
+    cNavy:    "#36505F",
+    cLinen:   "#E8DBBA",
+    cGlow:    "#F6E7B8",
+    cWood:  "#D0A062",
+    cPot:   "#ECEDEA",
+    cLeaf:  "#7E9B5E",
+    cLeafD: "#5E7A4A",
+    cOlive: "#9AA886",
+    cCactus:"#88A86E",
+    cTerra: "#C8794C",
+    cPot:   "#DCD6CA",
+    cSoil:  "#6B5848",
+    cFar:   "#CFD3CA",
+    cMid:   "#B4BCAE",
+    cNear:  "#97A48F",
+    cField: "#A8B894",
+    cWheat: "#DDC98C",
+    cSand:  "#E4D3AE",
+    cSea:   "#A9C4C9",
+    cPath:  "#D6C6A6",
+    cPine:  "#6E8A5E",
+    cPineD: "#4E6A44",
+    cBale:  "#D4BC7E",
+    cAzure: "#0D6FBE",
+    cYellow:"#F0C800",
+    cRed:   "#E8504A",
+    cSky:   "#96B4D2",
+    cPaper: "#FAFAF8",
+    cInk:   "#262B2E",
+    cFelt:  "#B9B7AE",
+    cScreen:"#D2DEDA",
+    cBeige: "#E6E0D2",
+    cWash:  "#F2EBE1",
+    cGreen: "#5E7A55",
+    cGreenD:"#44583E",
+    cSofa:  "#F1EBE2",
+    cOrange:"#E8622A",
+    cAmber: "#F0A526",
+    cBlue:  "#7FA3B5",
+    cOlive: "#A8B35E",
+    /* the still life (src/still.js). Every key a module names has to exist
+       HERE too: an unknown key is not an error, it falls through to the raw
+       string and the browser paints it black — which is how the board's
+       armchair became a slab. The set keeps its own `cFrame` and `cGrain`
+       rather than borrowing cWood and cSand, so no other page can quietly
+       re-tune the hourglass. */
+    cStone: "#C9BFA8",
+    cGlass: "#AFC4B2",
+    cWine:  "#8E3A44",
+    cPewter:"#B9BCC2",
+    cFish:  "#9BA7B0",
+    cCrust: "#B97A3E",
+    cBread: "#E8C58E",
+    cLemon: "#EFC13A",
+    cPith:  "#F6EDD4",
+    cBone:  "#EAE3CF",
+    cGrain: "#E9DCBA",
+    cFrame: "#B8814C",
+    cBrass: "#C9A043",
+    cWax:   "#F1EADA",
+    cGrape: "#6E5A7E",
+    cBloom: "#C9BED2",
+    cBookR: "#A8453A",
+    cBookB: "#4A6A8E",
+    cBookG: "#6E7A4E",
+    cPage:  "#EFE8D6",
+  },
+  sheet: {
+    ink:   "#17171A",
+    paper: "#FBFAF8",
+    seed:  [9, 1, 999, 1],
+  },
+};
+
+const q = new URLSearchParams(location.search);
+if (q.has("reset")) { try { for (const k of Object.keys(localStorage)) if (/dial|doodle|desk/i.test(k)) localStorage.removeItem(k); } catch (e) {} }
+
+/* rendering and replay now live in src/stage.js, shared with buildings.html */
+const { NS, flat, shade, Live } = Stage;
+const drawSubject = (S, P) => Stage.build(S, P, TILE);
+
+function subjectAtCentre() {
+  let best = null, bd = 1e9;
+  for (const el of world.children) {
+    if (!el.__strokes) continue;
+    const b = el.getBoundingClientRect();
+    const d = Math.hypot(b.left + b.width / 2 - innerWidth / 2,
+                         b.top + b.height / 2 - innerHeight / 2);
+    if (d < bd) { bd = d; best = el; }
+  }
+  return best;
+}
+
+function draw() {
+  const P = V || flat(DEFAULTS);
+  document.body.style.background = P.paper;
+  world.textContent = "";
+  for (const S of SUBJECTS) {
+    /*
+     * One broken subject must not take down the canvas.
+     *
+     * A reference-error in a single module threw mid-loop, so every later
+     * subject was skipped AND the view transform at the end of draw() never
+     * ran — the canvas silently showed one tile at 1:1 and `?focus` looked
+     * broken. The real fault was three files away.
+     */
+    try { world.appendChild(drawSubject(S, P)); }
+    catch (e) { console.error("subject '" + S.key + "' failed:", e); }
+  }
+  apply();
+}
+
+/* ── pan and zoom ───────────────────────────────────────────────────── */
+let k = 1, tx = 0, ty = 0;
+const zl = document.getElementById("zl");
+
+function apply() {
+  world.setAttribute("transform", `translate(${tx} ${ty}) scale(${k})`);
+  zl.textContent = Math.round(k * 100) + "%";
+}
+
+function fitAll() {
+  /* ?focus=<key> frames one subject, which is how you judge a form at the
+     size it will be looked at rather than at whatever the grid happens to
+     give it. */
+  const f = q.get("focus") && SUBJECTS.find((s) => s.key === q.get("focus"));
+  if (f) {
+    const m = 50;
+    k = Math.min((innerWidth - m * 2) / TILE.w, (innerHeight - m * 2) / TILE.h);
+    tx = (innerWidth - TILE.w * k) / 2 - f.col * (TILE.w + TILE.gap) * k;
+    ty = (innerHeight - TILE.h * k) / 2 - f.row * (TILE.h + TILE.gap) * k;
+    return apply();
+  }
+  const cols = Math.max(...SUBJECTS.map((s) => s.col)) + 1;
+  const rows = Math.max(...SUBJECTS.map((s) => s.row)) + 1;
+  const W = cols * TILE.w + (cols - 1) * TILE.gap;
+  const H = rows * TILE.h + (rows - 1) * TILE.gap;
+  const m = 60;
+  k = Math.min((innerWidth - m * 2) / W, (innerHeight - m * 2) / H);
+  tx = (innerWidth - W * k) / 2;
+  ty = (innerHeight - H * k) / 2;
+  apply();
+}
+
+/* Zoom about the cursor, not about the origin — zooming to a corner and then
+   hunting for the drawing is the single most annoying thing a canvas can do. */
+function zoomAt(cx, cy, f) {
+  const nk = Math.max(0.08, Math.min(14, k * f));
+  tx = cx - (cx - tx) * (nk / k);
+  ty = cy - (cy - ty) * (nk / k);
+  k = nk; apply();
+}
+
+art.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0016));
+}, { passive: false });
+
+let dragging = false, lx = 0, ly = 0;
+art.addEventListener("pointerdown", (e) => {
+  dragging = true; lx = e.clientX; ly = e.clientY;
+  art.classList.add("drag");
+  try { art.setPointerCapture(e.pointerId); } catch (err) {}
+});
+art.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  tx += e.clientX - lx; ty += e.clientY - ly;
+  lx = e.clientX; ly = e.clientY; apply();
+});
+["pointerup", "pointercancel"].forEach((n) =>
+  art.addEventListener(n, () => { dragging = false; art.classList.remove("drag"); }));
+
+document.getElementById("in").onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1.3);
+document.getElementById("out").onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.3);
+document.getElementById("fit").onclick = fitAll;
+
+/*
+ * `draw` replays whichever subject is nearest the middle of the screen, so
+ * the control needs no target: pan to a thing and press d.
+ */
+const playBtn = document.getElementById("play");
+function playHere(opt) {
+  const g = subjectAtCentre();
+  if (!g) return;
+  if (Live.running) { Live.stop(); Live.reset(g); playBtn.textContent = "draw"; return; }
+  playBtn.textContent = "stop";
+  /* a pencil already held by `s` is inked over, not roughed out a second time */
+  const held = g.__ghost && g.__ghost.el.style.display === "";
+  Live.play(g, { ...(opt || {}), roughed: !!held,
+                 done: () => { playBtn.textContent = "draw"; } });
+}
+playBtn.onclick = () => playHere();
+
+/*
+ * `s` roughs the subject out in pencil and STOPS there — the loading state on
+ * its own, held rather than inked. `d` then inks over the held pencil and
+ * erases it; `s` again drops it. Needs ?sketch=1: without the ghost layer
+ * there is nothing to rough out.
+ */
+function sketchHere() {
+  const g = subjectAtCentre();
+  if (!g) return;
+  if (!g.__ghost || !g.__ghost.strokes.length) return;
+  if (g.__ghost.el.style.display === "") { Live.stop(); Live.reset(g); return; }
+  Live.sketch(g);
+}
+
+addEventListener("keydown", (e) => {
+  if (e.key === "s") sketchHere();
+  if (e.key === "d") playHere();
+  if (e.key === "D") playHere({ speed: 900, gap: 70, fillMs: 300 });
+  if (e.key === "0" || e.key === "f") fitAll();
+  if (e.key === "=" || e.key === "+") zoomAt(innerWidth / 2, innerHeight / 2, 1.3);
+  if (e.key === "-") zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.3);
+});
+
+if (!q.has("nodial")) DialKit.createDialRoot({ position: "top-right", theme: "dark" });
+const kit = DialKit.createDialKit("Canvas", DEFAULTS, { id: "doodle-canvas", persist: true });
+let first = true;
+kit.subscribe((v) => {
+  V = flat(v);
+  /* ?outline=1 forces the line-only view, so a particular read of the canvas
+     can be linked to rather than described. */
+  if (q.has("outline")) V.outline = q.get("outline") !== "0";
+  /*
+   * ?sketch=1 builds the pencil underdrawing, so `d` roughs the subject out
+   * before inking it. Off by default: the ghost layer costs ~18% more paths
+   * and 78% more draw time, which nobody should pay to look at a canvas.
+   */
+  /*
+   * ?first=<key> is the FIRST-RUN view: a blank sheet, one subject, roughed
+   * out in pencil and then inked. It implies the ghost layer, and it hides
+   * every other subject — a canvas of finished drawings around it is the
+   * thing that stops a replay reading as a drawing being made.
+   */
+  const firstKey = q.get("first");
+  V.ghost = q.get("sketch") === "1" || !!firstKey;
+  draw();
+  if (first) {
+    first = false;
+    fitAll();
+    /*
+     * ?draw=<key> frames a subject and draws it live — the link form, so a
+     * particular build-up can be sent rather than described.
+     */
+    const dk = q.get("draw") || firstKey;
+    if (dk) {
+      const S = SUBJECTS.find((x) => x.key === dk);
+      if (S) {
+        const m = 50;
+        k = Math.min((innerWidth - m * 2) / TILE.w, (innerHeight - m * 2) / TILE.h);
+        tx = (innerWidth - TILE.w * k) / 2 - S.col * (TILE.w + TILE.gap) * k;
+        ty = (innerHeight - TILE.h * k) / 2 - S.row * (TILE.h + TILE.gap) * k;
+        apply();
+        const g = [...world.children].find((x) => x.__key === dk);
+        if (g) {
+          /* off the paper before the first paint, or the 260 ms below is
+             260 ms of the finished drawing */
+          Live.arm(g);
+          if (firstKey) [...world.children].forEach((x) => {
+            if (x !== g) x.style.display = "none";
+          });
+          setTimeout(() => {
+            playBtn.textContent = "stop";
+            Live.play(g, { speed: +(q.get("speed") || 2600),
+                           done: () => { playBtn.textContent = "draw"; } });
+          }, 260);
+        }
+      }
+    }
+  }
+}, true);
+addEventListener("resize", () => {});
+</script>
+</html>
