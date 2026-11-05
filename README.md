@@ -25,7 +25,7 @@ Or install it as a Claude Code plugin:
 
 ```
 /plugin marketplace add vishlbhardwaj/skills
-/plugin install vishlbhardwaj-skills@vishlbhardwaj
+/plugin install doodle@vishlbhardwaj
 ```
 
 ## Requirements

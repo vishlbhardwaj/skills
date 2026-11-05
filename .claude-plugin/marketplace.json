@@ -4,7 +4,7 @@
   "metadata": { "description": "Skills by Vishal Bhardwaj", "version": "1.0.0" },
   "plugins": [
     {
-      "name": "vishlbhardwaj-skills",
+      "name": "doodle",
       "source": "./",
       "description": "Doodle: draw anything as a code-generated, hand-drawn line illustration.",
       "version": "1.0.0",
