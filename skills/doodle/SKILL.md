@@ -78,7 +78,7 @@ for with a rejected drawing.
 | lettering, a sign | `src/letter.js` | `pages-and-files.md` |
 | make it move (Rive) | the Rive exporter (not bundled; see the file) | `animation.md` |
 | watch it draw, underdrawing | `?draw=<key>`, `?sketch=1` | `hand-and-craft.md` |
-| clean / vector / not doodly | n/a | use the `clean-illustration` skill |
+| clean / vector / not doodly | `?style=clean` on retro.html / cafe.html | the `clean-illustration` skill if installed |
 | a SET, a stress test | an existing set page as template | `checking.md` |
 | which page / file does what | n/a | `references/pages-and-files.md` |
 

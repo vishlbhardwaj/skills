@@ -19,24 +19,9 @@ On first use it copies the engine into `./doodle` in your project and draws ther
 
 [Read the skill](skills/doodle/SKILL.md)
 
-## clean-illustration
+## Claude Code plugin
 
-The same engine with the hand switched off: crisp even lines, exact geometry, flat
-colour. Needs `doodle` installed too.
-
-```sh
-npx skills add vishlbhardwaj/skills --skill clean-illustration
-```
-
-[Read the skill](skills/clean-illustration/SKILL.md)
-
-## Install everything
-
-```sh
-npx skills add vishlbhardwaj/skills
-```
-
-Or as a Claude Code plugin:
+Or install it as a Claude Code plugin:
 
 ```
 /plugin marketplace add vishlbhardwaj/skills

@@ -6,7 +6,7 @@
     {
       "name": "vishlbhardwaj-skills",
       "source": "./",
-      "description": "Code-drawn illustration skills: doodle (hand-drawn line illustration) and clean-illustration.",
+      "description": "Doodle: draw anything as a code-generated, hand-drawn line illustration.",
       "version": "1.0.0",
       "author": { "name": "Vishal Bhardwaj" },
       "homepage": "https://github.com/vishlbhardwaj/skills",
