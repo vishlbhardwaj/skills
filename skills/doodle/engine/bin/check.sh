@@ -2,7 +2,7 @@
 # Headless check for every page. Asserts, and exits non-zero on failure.
 set -u
 cd "$(dirname "$0")/.."
-. "$(dirname "$0")/chrome.sh"
+. bin/chrome.sh
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 fail=0
 cp -R src "$TMP/"; [ -d vendor ] && cp -R vendor "$TMP/"; [ -d drawings ] && cp -R drawings "$TMP/"
